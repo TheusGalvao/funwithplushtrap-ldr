@@ -316,7 +316,76 @@ h1, h2, h3, h4 {
   display: block;
 }
 
-/* Barra de Luz com Marcador de 50% */
+/* Painel de Ajuste do Limiar de Luz (%) */
+.threshold-slider-box {
+  background: var(--inner-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.threshold-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.threshold-val-badge {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--yellow-primary);
+  background: var(--blue-deep);
+  border: 1px solid var(--yellow-primary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
+}
+
+body.theme-light .threshold-val-badge {
+  color: var(--blue-deep);
+  background: var(--yellow-primary);
+  border-color: var(--blue-deep);
+}
+
+.threshold-input-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.threshold-range-slider {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--card-border);
+  outline: none;
+  cursor: pointer;
+  accent-color: var(--yellow-primary);
+}
+
+.threshold-quick-btn {
+  background: var(--card-bg);
+  color: var(--text-color);
+  border: 1px solid var(--card-border);
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.threshold-quick-btn:hover,
+.threshold-quick-btn.active {
+  background: var(--contrast-solid);
+  color: var(--bg-color);
+  border-color: var(--contrast-solid);
+}
+
+/* Barra de Luz com Marcador Dinâmico */
 .ldr-meter-wrap {
   position: relative;
   background: var(--inner-bg);

@@ -17,7 +17,7 @@
     <header class="top-header">
       <div>
         <h1>FUN WITH PLUSHTRAP &bull; CONTROLE LDR</h1>
-        <p class="subtitle">FNAF 4 Minigame &bull; Ilumine o LDR (&ge; 50%) para acender a Lanterna no "X"</p>
+        <p class="subtitle">FNAF 4 Minigame &bull; Ilumine o LDR (&ge; <span id="header-threshold-lbl">50%</span>) para acender a Lanterna no "X"</p>
       </div>
 
       <div class="header-badges">
@@ -43,17 +43,43 @@
       <!-- COLUNA 1: CONFIGURAÇÃO DE TECLA E STATUS DO GATILHO -->
       <section class="card">
         <h2>
-          <span>1. Lanterna do Plushtrap (&ge; 50%)</span>
+          <span>1. Lanterna do Plushtrap (&ge; <span id="card-threshold-lbl">50%</span>)</span>
           <span id="badge-modo" style="font-family: var(--font-body); font-size: 0.75rem; font-weight: 700;">SEGURAR TECLA</span>
         </h2>
 
         <!-- Banner Visual de Estado da Tecla -->
         <div id="signal-banner" class="signal-banner">
           <span id="signal-icon" class="signal-icon">🔦</span>
-          <div id="signal-title" class="signal-state-title">CORREDOR ESCURO (&lt; 50%)</div>
+          <div id="signal-title" class="signal-state-title">CORREDOR ESCURO (&lt; <span id="banner-threshold-lbl">50%</span>)</div>
           <p id="signal-desc" class="signal-desc">
-            Ilumine o LDR no ESP (&ge; 50%) para segurar a tecla <strong id="lbl-tecla-ativa">CTRL</strong> no <em>Fun with Plushtrap</em>!
+            Ilumine o LDR no ESP (&ge; <span id="desc-threshold-lbl">50%</span>) para segurar a tecla <strong id="lbl-tecla-ativa">CTRL</strong> no <em>Fun with Plushtrap</em>!
           </p>
+        </div>
+
+        <!-- Seletor / Ajuste da Porcentagem de Ativação -->
+        <div class="threshold-slider-box">
+          <div class="threshold-slider-header">
+            <div>
+              <strong style="font-size: 0.9rem;">Porcentagem de Ativação da Tecla:</strong>
+              <span class="switch-sub">A tecla é acionada quando a luz for maior ou igual a este valor</span>
+            </div>
+            <div id="threshold-display" class="threshold-val-badge">50%</div>
+          </div>
+
+          <div class="threshold-input-row">
+            <input type="range" id="slider-threshold" class="threshold-range-slider" min="5" max="95" step="1" value="50" oninput="alterarLimiarLuz(this.value)">
+          </div>
+
+          <div>
+            <span class="switch-sub" style="margin-bottom: 6px;">Valores rápidos:</span>
+            <div class="preset-keys">
+              <button class="threshold-quick-btn" onclick="alterarLimiarLuz(25)">25% (Muito Sensível)</button>
+              <button class="threshold-quick-btn" onclick="alterarLimiarLuz(35)">35% (Sensível)</button>
+              <button class="threshold-quick-btn active" id="btn-th-50" onclick="alterarLimiarLuz(50)">50% (Padrão)</button>
+              <button class="threshold-quick-btn" onclick="alterarLimiarLuz(65)">65% (Forte)</button>
+              <button class="threshold-quick-btn" onclick="alterarLimiarLuz(80)">80% (Laser / Luz Direta)</button>
+            </div>
+          </div>
         </div>
 
         <!-- Seleção / Gravação de Qualquer Tecla do Teclado -->
@@ -112,13 +138,13 @@
           <span id="pct-header" style="font-family: var(--font-body); font-size: 0.9rem; font-weight: 700;">0%</span>
         </h2>
 
-        <!-- Barra de Luminosidade com Linha de Corte em 50% -->
+        <!-- Barra de Luminosidade com Linha de Corte Dinâmica -->
         <div>
-          <span class="switch-sub" style="margin-bottom: 6px;">Intensidade de Luz no LDR (Linha vermelha = Gatilho de 50%):</span>
+          <span class="switch-sub" style="margin-bottom: 6px;">Intensidade de Luz no LDR (Linha vermelha = Gatilho de <span id="bar-threshold-lbl">50%</span>):</span>
           <div class="ldr-meter-wrap">
             <div id="bar" class="ldr-meter-fill"></div>
-            <div class="threshold-marker" title="Limiar de 50% para acionar a tecla"></div>
-            <span class="threshold-label">50% (Acende Lanterna)</span>
+            <div id="threshold-line" class="threshold-marker" title="Limiar para acionar a tecla" style="left: 50%;"></div>
+            <span id="threshold-flag" class="threshold-label" style="left: calc(50% + 6px);">50% (Gatilho)</span>
             <div id="pct" class="ldr-meter-text">0%</div>
           </div>
         </div>
@@ -202,7 +228,7 @@
     let emulacaoAtiva = true;
     let teclaPressionadaAgora = false;
 
-    const LIMIAR_LUZ = 50; // >= 50% segura a tecla, < 50% solta
+    let limiarLuz = 50; // Porcentagem configurável de ativação da tecla
     const BRIDGE_URL = 'http://127.0.0.1:8765';
 
     // Comunicação direta pelo navegador (opcional caso não use o auto-receptor do bridge)
@@ -305,6 +331,46 @@
       sincronizarConfigComBridge();
     }
 
+    // ========================================================================
+    // AJUSTE DINÂMICO DA PORCENTAGEM DE ATIVAÇÃO
+    // ========================================================================
+    function alterarLimiarLuz(novoValor) {
+      limiarLuz = Math.min(95, Math.max(5, parseInt(novoValor, 10) || 50));
+
+      // Atualiza valores visuais
+      const txt = limiarLuz + '%';
+      document.getElementById('threshold-display').textContent = txt;
+      document.getElementById('slider-threshold').value = limiarLuz;
+      document.getElementById('header-threshold-lbl').textContent = txt;
+      document.getElementById('card-threshold-lbl').textContent = txt;
+      document.getElementById('banner-threshold-lbl').textContent = txt;
+      document.getElementById('desc-threshold-lbl').textContent = txt;
+      document.getElementById('bar-threshold-lbl').textContent = txt;
+
+      // Move a linha vermelha e o selo na barra de luz
+      const line = document.getElementById('threshold-line');
+      const flag = document.getElementById('threshold-flag');
+      if (line) line.style.left = limiarLuz + '%';
+      if (flag) {
+        flag.style.left = `calc(${limiarLuz}% + 6px)`;
+        flag.textContent = `${txt} (Gatilho)`;
+      }
+
+      // Atualiza botões de atalho rápido
+      document.querySelectorAll('.threshold-quick-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.startsWith(txt));
+      });
+
+      // Sincroniza com a ponte do Windows
+      sincronizarConfigComBridge();
+
+      // Reavalia o estado da tecla imediatamente com o novo limiar
+      const ldrVal = parseInt(document.getElementById('ldr').textContent, 10) || 0;
+      const maxVal = parseInt(document.getElementById('max').textContent, 10) || 240;
+      const pctAtual = Math.min(100, Math.max(0, Math.round((ldrVal / maxVal) * 100)));
+      verificarGatilhoLuz(pctAtual, false);
+    }
+
     async function sincronizarConfigComBridge() {
       try {
         const params = new URLSearchParams({
@@ -312,6 +378,7 @@
           key: teclaConfigurada.key,
           code: teclaConfigurada.code,
           label: teclaConfigurada.label,
+          threshold: String(limiarLuz),
           enabled: emulacaoAtiva ? '1' : '0'
         });
         await fetch(`${BRIDGE_URL}/config?${params.toString()}`);
@@ -319,23 +386,23 @@
     }
 
     // ========================================================================
-    // 2. GATILHO DE 50% E ATUALIZAÇÃO VISUAL (FUN WITH PLUSHTRAP)
+    // 2. GATILHO DE LUZ E ATUALIZAÇÃO VISUAL (FUN WITH PLUSHTRAP)
     // ========================================================================
-    function verificarGatilho50Porcento(pct, gerenciadoPeloBridge) {
-      const passouDe50 = pct >= LIMIAR_LUZ;
+    function verificarGatilhoLuz(pct, gerenciadoPeloBridge) {
+      const passouDoLimiar = pct >= limiarLuz;
 
-      document.body.classList.toggle('theme-light', passouDe50);
-      atualizarArenaPlushtrap(passouDe50);
+      document.body.classList.toggle('theme-light', passouDoLimiar);
+      atualizarArenaPlushtrap(passouDoLimiar);
 
       const banner = document.getElementById('signal-banner');
       const title = document.getElementById('signal-title');
       const desc = document.getElementById('signal-desc');
       const statTecla = document.getElementById('stat-tecla');
 
-      if (passouDe50) {
+      if (passouDoLimiar) {
         banner.classList.add('active');
         title.textContent = `LANTERNA ACESA! [${teclaConfigurada.label}] (${pct}%)`;
-        desc.innerHTML = `Luz &ge; 50% detectada! Segurando a tecla <strong>${teclaConfigurada.label}</strong> no <em>Fun with Plushtrap</em>!`;
+        desc.innerHTML = `Luz &ge; ${limiarLuz}% detectada! Segurando a tecla <strong>${teclaConfigurada.label}</strong> no <em>Fun with Plushtrap</em>!`;
         statTecla.textContent = 'ON';
 
         if (!teclaPressionadaAgora && emulacaoAtiva) {
@@ -345,7 +412,7 @@
       } else {
         banner.classList.remove('active');
         title.textContent = `CORREDOR ESCURO (${pct}%)`;
-        desc.innerHTML = `Ilumine o LDR no ESP (&ge; 50%) para segurar a tecla <strong>${teclaConfigurada.label}</strong> no <em>Fun with Plushtrap</em>!`;
+        desc.innerHTML = `Ilumine o LDR no ESP (&ge; ${limiarLuz}%) para segurar a tecla <strong>${teclaConfigurada.label}</strong> no <em>Fun with Plushtrap</em>!`;
         statTecla.textContent = 'OFF';
 
         if (teclaPressionadaAgora) {
@@ -562,7 +629,7 @@
         if (el) el.classList.toggle('on', i <= d.leds);
       }
 
-      verificarGatilho50Porcento(pct, gerenciadoPeloBridge);
+      verificarGatilhoLuz(pct, gerenciadoPeloBridge);
     }
   </script>
 </body>

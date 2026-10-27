@@ -16,13 +16,14 @@ const { spawn } = require('child_process');
 const path = require('path');
 
 const PORT = 8765;
-const LIMIAR_LUZ = 50;
+let LIMIAR_LUZ = 50;
 
 // Estado Global do Sistema
 let estadoSistema = {
   ldr: 0,
   max: 240,
   pct: 0,
+  limiarLuz: 50,
   leds: 0,
   conectado: false,
   origem: 'Aguardando ESP via USB...',
@@ -257,12 +258,12 @@ function avaliarGatilhoLuz(pct) {
   if (pct >= LIMIAR_LUZ) {
     if (!estadoSistema.segurandoTecla) {
       pressionarSegurarTecla(estadoSistema.tecla.vk);
-      console.log(`🔦 [LUZ ${pct}% >= 50%] LANTERNA ACESA! Segurando [${estadoSistema.tecla.label}] no Fun with Plushtrap`);
+      console.log(`🔦 [LUZ ${pct}% >= ${LIMIAR_LUZ}%] LANTERNA ACESA! Segurando [${estadoSistema.tecla.label}] no Fun with Plushtrap`);
     }
   } else {
     if (estadoSistema.segurandoTecla) {
       soltarTecla();
-      console.log(`🌑 [LUZ ${pct}% <  50%] Lanterna apagada. Tecla [${estadoSistema.tecla.label}] solta`);
+      console.log(`🌑 [LUZ ${pct}% <  ${LIMIAR_LUZ}%] Lanterna apagada. Tecla [${estadoSistema.tecla.label}] solta`);
     }
   }
 }
@@ -325,7 +326,15 @@ const server = http.createServer((req, res) => {
     const code = url.searchParams.get('code');
     const label = url.searchParams.get('label');
     const enabled = url.searchParams.get('enabled');
+    const threshold = parseInt(url.searchParams.get('threshold') || '0', 10);
     const webserial = url.searchParams.get('webserial');
+
+    if (threshold > 0 && threshold <= 100) {
+      LIMIAR_LUZ = threshold;
+      estadoSistema.limiarLuz = threshold;
+      console.log(`[CONFIG] Limiar de ativação alterado para: ${threshold}%`);
+      avaliarGatilhoLuz(estadoSistema.pct);
+    }
 
     if (webserial !== null) {
       const usarNav = webserial === '1';

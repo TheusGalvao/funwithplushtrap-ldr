@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle LDR - Minigame "Fun with Plushtrap" (FNAF 4)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gurajada&family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="control_fnaf4.css">
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- CABEÇALHO E STATUS DE AUTO-CONEXÃO -->
+    <header class="top-header">
+      <div>
+        <h1>FUN WITH PLUSHTRAP &bull; CONTROLE LDR</h1>
+        <p class="subtitle">FNAF 4 Minigame &bull; Ilumine o LDR (&ge; 50%) para acender a Lanterna no "X"</p>
+      </div>
+
+      <div class="header-badges">
+        <div class="badge" title="Recepção automática do sinal do ESP via Emulador ou Navegador">
+          <span class="dot" id="dot-esp"></span>
+          <span id="txt-esp">Buscando ESP automaticamente...</span>
+        </div>
+
+        <div class="badge" title="Emulador Nativo de Teclado para o minigame Fun with Plushtrap">
+          <span class="dot warn" id="dot-bridge"></span>
+          <span id="txt-bridge">Emulador: Conectando...</span>
+        </div>
+
+        <button id="btn-serial" class="btn btn-secondary" onclick="toggleSerial()" title="Usar seletor manual de porta do navegador">
+          USB Manual (Navegador)
+        </button>
+      </div>
+    </header>
+
+    <!-- GRID PRINCIPAL: CONFIGURAÇÃO DE TECLA + LEITURA/CALIBRAÇÃO DO ESP -->
+    <div class="control-grid">
+
+      <!-- COLUNA 1: CONFIGURAÇÃO DE TECLA E STATUS DO GATILHO -->
+      <section class="card">
+        <h2>
+          <span>1. Lanterna do Plushtrap (&ge; 50%)</span>
+          <span id="badge-modo" style="font-family: var(--font-body); font-size: 0.75rem; font-weight: 700;">SEGURAR TECLA</span>
+        </h2>
+
+        <!-- Banner Visual de Estado da Tecla -->
+        <div id="signal-banner" class="signal-banner">
+          <span id="signal-icon" class="signal-icon">🔦</span>
+          <div id="signal-title" class="signal-state-title">CORREDOR ESCURO (&lt; 50%)</div>
+          <p id="signal-desc" class="signal-desc">
+            Ilumine o LDR no ESP (&ge; 50%) para segurar a tecla <strong id="lbl-tecla-ativa">CTRL</strong> no <em>Fun with Plushtrap</em>!
+          </p>
+        </div>
+
+        <!-- Seleção / Gravação de Qualquer Tecla do Teclado -->
+        <div class="keybind-box">
+          <div class="keybind-row">
+            <div>
+              <strong style="font-size: 0.9rem;">Tecla da Lanterna no Jogo:</strong>
+              <span class="switch-sub">Padrão do Fun with Plushtrap: CTRL (ou configure qualquer tecla)</span>
+            </div>
+            <div id="key-display" class="key-display">CTRL</div>
+          </div>
+
+          <button id="btn-gravar-tecla" class="btn btn-primary" onclick="iniciarGravacaoTecla()">
+            ⌨️ Clique Aqui para Configurar Qualquer Tecla
+          </button>
+
+          <div>
+            <span class="switch-sub" style="margin-bottom: 6px;">Atalhos rápidos de tecla:</span>
+            <div class="preset-keys">
+              <button class="btn-preset selected" onclick="definirTeclaPreset('Control', 'ControlLeft', 17, 'CTRL')">Ctrl (Lanterna Plushtrap)</button>
+              <button class="btn-preset" onclick="definirTeclaPreset(' ', 'Space', 32, 'ESPAÇO')">Espaço</button>
+              <button class="btn-preset" onclick="definirTeclaPreset('Shift', 'ShiftLeft', 16, 'SHIFT')">Shift</button>
+              <button class="btn-preset" onclick="definirTeclaPreset('z', 'KeyZ', 90, 'Z')">Tecla Z</button>
+              <button class="btn-preset" onclick="definirTeclaPreset('x', 'KeyX', 88, 'X')">Tecla X</button>
+              <button class="btn-preset" onclick="definirTeclaPreset('e', 'KeyE', 69, 'E')">Tecla E</button>
+              <button class="btn-preset" onclick="definirTeclaPreset('Enter', 'Enter', 13, 'ENTER')">Enter</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chave Geral para Habilitar/Pausar Envio ao Jogo -->
+        <div class="master-switch-bar">
+          <div>
+            <span class="switch-label">Simulação de Teclado no Jogo</span>
+            <span class="switch-sub">Já inicia ATIVO e pronto para jogar o Fun with Plushtrap</span>
+          </div>
+          <button id="btn-toggle-emulacao" class="btn btn-primary" onclick="alternarEmulacao()">
+            🟢 PRONTO / ATIVO
+          </button>
+        </div>
+
+        <!-- Arena de Teste Local (Corredor Fun with Plushtrap) -->
+        <div>
+          <span class="switch-sub" style="margin-bottom: 6px;">Prévia do Minigame "Fun with Plushtrap" (Reage ao LDR &ge; 50% ou à tecla):</span>
+          <div id="fnaf-arena" class="fnaf-test-arena">
+            <span id="fnaf-icon" class="fnaf-hallway-icon">🐰</span>
+            <span id="fnaf-status" class="fnaf-hallway-status">Corredor Escuro... Plushtrap se aproximando do [ X ]</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUNA 2: COMUNICAÇÃO E CALIBRAÇÃO DO ESP / ARDUINO -->
+      <section class="card">
+        <h2>
+          <span>2. Sinal de Iluminação do ESP</span>
+          <span id="pct-header" style="font-family: var(--font-body); font-size: 0.9rem; font-weight: 700;">0%</span>
+        </h2>
+
+        <!-- Barra de Luminosidade com Linha de Corte em 50% -->
+        <div>
+          <span class="switch-sub" style="margin-bottom: 6px;">Intensidade de Luz no LDR (Linha vermelha = Gatilho de 50%):</span>
+          <div class="ldr-meter-wrap">
+            <div id="bar" class="ldr-meter-fill"></div>
+            <div class="threshold-marker" title="Limiar de 50% para acionar a tecla"></div>
+            <span class="threshold-label">50% (Acende Lanterna)</span>
+            <div id="pct" class="ldr-meter-text">0%</div>
+          </div>
+        </div>
+
+        <!-- Estatísticas do JSON do ESP -->
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">Luz Atual (LDR)</span>
+            <span id="ldr" class="stat-val">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Máx Calibrado</span>
+            <span id="max" class="stat-val">240</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Lanterna (Tecla)</span>
+            <span id="stat-tecla" class="stat-val">OFF</span>
+          </div>
+        </div>
+
+        <!-- 4 LEDs do Arduino Mega -->
+        <div>
+          <span class="switch-sub" style="margin-bottom: 6px;">LEDs Físicos (Arduino Mega / ESP):</span>
+          <div class="leds-row">
+            <div class="led-box">
+              <div id="led1" class="led" title="1º LED - Pino 26"></div>
+              <span>Pino 26</span>
+            </div>
+            <div class="led-box">
+              <div id="led2" class="led" title="2º LED - Pino 28"></div>
+              <span>Pino 28</span>
+            </div>
+            <div class="led-box">
+              <div id="led3" class="led" title="3º LED - Pino 24"></div>
+              <span>Pino 24</span>
+            </div>
+            <div class="led-box">
+              <div id="led4" class="led" title="4º LED - Pino 22"></div>
+              <span>Pino 22</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controles de Calibração (Mesmo protocolo do ESP) -->
+        <div>
+          <span class="switch-sub" style="margin-bottom: 6px;">Calibrar Limite de Luz no ESP:</span>
+          <div class="cal-grid">
+            <button class="btn btn-secondary" onclick="cmd('LEFT')">-20</button>
+            <button class="btn btn-secondary" onclick="cmd('DOWN')">-5</button>
+            <button class="btn btn-secondary" onclick="cmd('UP')">+5</button>
+            <button class="btn btn-secondary" onclick="cmd('RIGHT')">+20</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="cmd('AUTO')">
+          🎯 Auto-Calibrar Agora (Definir Luz Atual como 100%)
+        </button>
+
+        <div class="custom-max-row">
+          <input type="number" id="novoMax" class="input-max" placeholder="Definir Máximo (10 a 1023)" min="10" max="1023">
+          <button class="btn btn-secondary" onclick="definirMax()">Definir Máx</button>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       LÓGICA AUTO-PRONTA: RECEBE DO EMULADOR OU WEB SERIAL E ACIONA >= 50%
+       ======================================================================== -->
+  <script>
+    // Tecla configurada (Padrão: Control - Lanterna do Fun with Plushtrap)
+    let teclaConfigurada = {
+      key: 'Control',
+      code: 'ControlLeft',
+      keyCode: 17, // VK_CONTROL = 17
+      label: 'CTRL'
+    };
+
+    let gravandoTecla = false;
+    let emulacaoAtiva = true;
+    let teclaPressionadaAgora = false;
+
+    const LIMIAR_LUZ = 50; // >= 50% segura a tecla, < 50% solta
+    const BRIDGE_URL = 'http://127.0.0.1:8765';
+
+    // Comunicação direta pelo navegador (opcional caso não use o auto-receptor do bridge)
+    let port = null;
+    let reader = null;
+    let keepReading = false;
+    let bridgeAtivo = false;
+
+    // ========================================================================
+    // 1. CONFIGURAÇÃO DE QUALQUER TECLA DO TECLADO
+    // ========================================================================
+    function iniciarGravacaoTecla() {
+      gravandoTecla = true;
+      const display = document.getElementById('key-display');
+      const btn = document.getElementById('btn-gravar-tecla');
+      display.textContent = 'APERTE...';
+      display.classList.add('listening');
+      btn.textContent = 'Pressione qualquer tecla do teclado agora... (ESC cancela)';
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (gravandoTecla) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.key === 'Escape') {
+          finalizarGravacaoTecla();
+          return;
+        }
+
+        if (teclaPressionadaAgora) {
+          liberarTeclaFisica();
+        }
+
+        const nomeAmigavel = e.key === ' ' ? 'ESPAÇO' : (e.key === 'Control' ? 'CTRL' : e.key.toUpperCase());
+        teclaConfigurada = {
+          key: e.key,
+          code: e.code,
+          keyCode: e.keyCode || e.which || 17,
+          label: nomeAmigavel
+        };
+
+        document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('selected'));
+        sincronizarConfigComBridge();
+        finalizarGravacaoTecla();
+        return;
+      }
+
+      if (e.code === teclaConfigurada.code || e.key.toLowerCase() === teclaConfigurada.key.toLowerCase()) {
+        atualizarArenaPlushtrap(true);
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (!gravandoTecla && !teclaPressionadaAgora) {
+        if (e.code === teclaConfigurada.code || e.key.toLowerCase() === teclaConfigurada.key.toLowerCase()) {
+          atualizarArenaPlushtrap(false);
+        }
+      }
+    });
+
+    function finalizarGravacaoTecla() {
+      gravandoTecla = false;
+      const display = document.getElementById('key-display');
+      const btn = document.getElementById('btn-gravar-tecla');
+      display.textContent = teclaConfigurada.label;
+      display.classList.remove('listening');
+      document.getElementById('lbl-tecla-ativa').textContent = teclaConfigurada.label;
+      btn.textContent = '⌨️ Clique Aqui para Configurar Qualquer Tecla';
+    }
+
+    function definirTeclaPreset(key, code, keyCode, label) {
+      if (teclaPressionadaAgora) {
+        liberarTeclaFisica();
+      }
+      teclaConfigurada = { key, code, keyCode, label };
+      document.getElementById('key-display').textContent = label;
+      document.getElementById('lbl-tecla-ativa').textContent = label;
+
+      document.querySelectorAll('.btn-preset').forEach(btn => {
+        btn.classList.toggle('selected', btn.textContent.toUpperCase().includes(label));
+      });
+
+      sincronizarConfigComBridge();
+    }
+
+    function alternarEmulacao() {
+      emulacaoAtiva = !emulacaoAtiva;
+      const btn = document.getElementById('btn-toggle-emulacao');
+      if (emulacaoAtiva) {
+        btn.textContent = '🟢 PRONTO / ATIVO';
+        btn.className = 'btn btn-primary';
+      } else {
+        if (teclaPressionadaAgora) {
+          liberarTeclaFisica();
+        }
+        btn.textContent = '⏸️ PAUSADO';
+        btn.className = 'btn btn-danger';
+      }
+      sincronizarConfigComBridge();
+    }
+
+    async function sincronizarConfigComBridge() {
+      try {
+        const params = new URLSearchParams({
+          vk: String(teclaConfigurada.keyCode),
+          key: teclaConfigurada.key,
+          code: teclaConfigurada.code,
+          label: teclaConfigurada.label,
+          enabled: emulacaoAtiva ? '1' : '0'
+        });
+        await fetch(`${BRIDGE_URL}/config?${params.toString()}`);
+      } catch (e) {}
+    }
+
+    // ========================================================================
+    // 2. GATILHO DE 50% E ATUALIZAÇÃO VISUAL (FUN WITH PLUSHTRAP)
+    // ========================================================================
+    function verificarGatilho50Porcento(pct, gerenciadoPeloBridge) {
+      const passouDe50 = pct >= LIMIAR_LUZ;
+
+      document.body.classList.toggle('theme-light', passouDe50);
+      atualizarArenaPlushtrap(passouDe50);
+
+      const banner = document.getElementById('signal-banner');
+      const title = document.getElementById('signal-title');
+      const desc = document.getElementById('signal-desc');
+      const statTecla = document.getElementById('stat-tecla');
+
+      if (passouDe50) {
+        banner.classList.add('active');
+        title.textContent = `LANTERNA ACESA! [${teclaConfigurada.label}] (${pct}%)`;
+        desc.innerHTML = `Luz &ge; 50% detectada! Segurando a tecla <strong>${teclaConfigurada.label}</strong> no <em>Fun with Plushtrap</em>!`;
+        statTecla.textContent = 'ON';
+
+        if (!teclaPressionadaAgora && emulacaoAtiva) {
+          teclaPressionadaAgora = true;
+          if (!gerenciadoPeloBridge) acionarTeclaFisica();
+        }
+      } else {
+        banner.classList.remove('active');
+        title.textContent = `CORREDOR ESCURO (${pct}%)`;
+        desc.innerHTML = `Ilumine o LDR no ESP (&ge; 50%) para segurar a tecla <strong>${teclaConfigurada.label}</strong> no <em>Fun with Plushtrap</em>!`;
+        statTecla.textContent = 'OFF';
+
+        if (teclaPressionadaAgora) {
+          teclaPressionadaAgora = false;
+          if (!gerenciadoPeloBridge) liberarTeclaFisica();
+        }
+      }
+    }
+
+    function atualizarArenaPlushtrap(acesa) {
+      const arena = document.getElementById('fnaf-arena');
+      const status = document.getElementById('fnaf-status');
+      if (acesa) {
+        arena.classList.add('lit');
+        status.textContent = `🔦 LANTERNA ACESA NO [ X ]! Plushtrap parado! (Tecla ${teclaConfigurada.label} Pressionada)`;
+      } else {
+        arena.classList.remove('lit');
+        status.textContent = 'Corredor Escuro... Plushtrap se aproximando do [ X ]';
+      }
+    }
+
+    async function acionarTeclaFisica() {
+      window.dispatchEvent(new KeyboardEvent('keydown', {
+        key: teclaConfigurada.key,
+        code: teclaConfigurada.code,
+        keyCode: teclaConfigurada.keyCode,
+        bubbles: true
+      }));
+      try {
+        await fetch(`${BRIDGE_URL}/key?action=down&vk=${teclaConfigurada.keyCode}&code=${encodeURIComponent(teclaConfigurada.code)}`);
+      } catch (e) {}
+    }
+
+    async function liberarTeclaFisica() {
+      window.dispatchEvent(new KeyboardEvent('keyup', {
+        key: teclaConfigurada.key,
+        code: teclaConfigurada.code,
+        keyCode: teclaConfigurada.keyCode,
+        bubbles: true
+      }));
+      try {
+        await fetch(`${BRIDGE_URL}/key?action=up&vk=${teclaConfigurada.keyCode}&code=${encodeURIComponent(teclaConfigurada.code)}`);
+      } catch (e) {}
+    }
+
+    // ========================================================================
+    // 3. SINCRONIZAÇÃO AUTOMÁTICA COM O EMULADOR (PRONTO AO INICIALIZAR!)
+    // ========================================================================
+    async function sincronizarEstadoAutomatico() {
+      const dotBridge = document.getElementById('dot-bridge');
+      const txtBridge = document.getElementById('txt-bridge');
+      const dotEsp = document.getElementById('dot-esp');
+      const txtEsp = document.getElementById('txt-esp');
+
+      try {
+        const r = await fetch(`${BRIDGE_URL}/state`, { signal: AbortSignal.timeout(400) });
+        if (r.ok) {
+          const state = await r.json();
+          bridgeAtivo = true;
+          dotBridge.className = 'dot connected';
+          txtBridge.textContent = 'Emulador Windows: PRONTO';
+
+          // Se não estivermos usando o Web Serial manual do navegador, usa a recepção automática do Bridge!
+          if (!port) {
+            if (state.conectado) {
+              dotEsp.className = 'dot connected';
+              txtEsp.textContent = state.origem || 'ESP Conectado via USB';
+              atualizarUI(state, true);
+            } else {
+              dotEsp.className = 'dot warn';
+              txtEsp.textContent = state.origem || 'Aguardando ESP via USB...';
+            }
+          }
+          return;
+        }
+      } catch (e) {}
+
+      bridgeAtivo = false;
+      dotBridge.className = 'dot warn';
+      txtBridge.textContent = 'Abra iniciar_fnaf4.bat p/ Jogo';
+    }
+
+    // Atualiza a cada 80ms para resposta instantânea ao iluminar o LDR
+    setInterval(sincronizarEstadoAutomatico, 80);
+    sincronizarEstadoAutomatico();
+
+    // ========================================================================
+    // 4. OPÇÃO MANUAL: WEB SERIAL DIRETO NO NAVEGADOR
+    // ========================================================================
+    async function toggleSerial() {
+      if (port) {
+        await desconectarSerial();
+      } else {
+        await conectarSerial();
+      }
+    }
+
+    async function conectarSerial() {
+      if (!('serial' in navigator)) {
+        alert('Seu navegador não suporta Web Serial API. Utilize Chrome, Edge ou Opera.');
+        return;
+      }
+
+      try {
+        // Pede ao bridge liberar a porta COM para o navegador assumir se necessário
+        try { await fetch(`${BRIDGE_URL}/config?webserial=1`); } catch (e) {}
+
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 115200 });
+        keepReading = true;
+
+        document.getElementById('dot-esp').className = 'dot connected';
+        document.getElementById('txt-esp').textContent = 'USB Conectado (Navegador)';
+        const btn = document.getElementById('btn-serial');
+        btn.textContent = 'Desconectar USB Manual';
+        btn.className = 'btn btn-danger';
+
+        lerSerial();
+      } catch (err) {
+        console.error('Erro ao abrir Web Serial:', err);
+        port = null;
+        try { await fetch(`${BRIDGE_URL}/config?webserial=0`); } catch (e) {}
+      }
+    }
+
+    async function desconectarSerial() {
+      keepReading = false;
+      if (teclaPressionadaAgora) liberarTeclaFisica();
+      try {
+        if (reader) await reader.cancel();
+        if (port) await port.close();
+      } catch (err) {
+      } finally {
+        port = null;
+        reader = null;
+        const btn = document.getElementById('btn-serial');
+        btn.textContent = 'USB Manual (Navegador)';
+        btn.className = 'btn btn-secondary';
+        try { await fetch(`${BRIDGE_URL}/config?webserial=0`); } catch (e) {}
+      }
+    }
+
+    async function lerSerial() {
+      const textDecoder = new TextDecoderStream();
+      port.readable.pipeTo(textDecoder.writable).catch(() => {});
+      reader = textDecoder.readable.getReader();
+      let buffer = '';
+
+      try {
+        while (keepReading) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value) {
+            buffer += value;
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                try {
+                  atualizarUI(JSON.parse(trimmed), false);
+                } catch (e) {}
+              }
+            }
+          }
+        }
+      } catch (err) {
+      } finally {
+        try { reader.releaseLock(); } catch (_) {}
+      }
+    }
+
+    async function enviarSerial(texto) {
+      if (!port || !port.writable) return false;
+      try {
+        const encoder = new TextEncoder();
+        const writer = port.writable.getWriter();
+        await writer.write(encoder.encode(texto + '\n'));
+        writer.releaseLock();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function cmd(c) {
+      if (port) {
+        await enviarSerial(c);
+      } else if (bridgeAtivo) {
+        try {
+          await fetch(`${BRIDGE_URL}/cmd?c=${encodeURIComponent(c)}`);
+        } catch (e) {}
+      }
+    }
+
+    function definirMax() {
+      const v = document.getElementById('novoMax').value;
+      if (v) cmd('MAX:' + v);
+    }
+
+    function atualizarUI(d, gerenciadoPeloBridge) {
+      if (!d || d.ldr === undefined) return;
+      const pct = Number(d.pct);
+
+      document.getElementById('ldr').textContent = d.ldr;
+      document.getElementById('max').textContent = d.max;
+      document.getElementById('pct').textContent = pct + '%';
+      document.getElementById('pct-header').textContent = pct + '%';
+      document.getElementById('bar').style.width = pct + '%';
+
+      for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById('led' + i);
+        if (el) el.classList.toggle('on', i <= d.leds);
+      }
+
+      verificarGatilho50Porcento(pct, gerenciadoPeloBridge);
+    }
+  </script>
+</body>
+</html>
